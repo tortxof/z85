@@ -2,14 +2,13 @@ package z85
 
 const Z85Alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
 
-var decodeMap map[byte]int
+var decodeMap [256]int
 
 var decodeMultipliers []uint32
 
 var paddingChunk = [5]byte{'#', '#', '#', '#', '#'}
 
 func init() {
-	decodeMap = make(map[byte]int)
 	for i := range Z85Alphabet {
 		decodeMap[Z85Alphabet[i]] = i
 	}
