@@ -1,4 +1,4 @@
-# z85
+# ⚡ z85
 
 A Go library for Z85 encoding and decoding, implementing the [ZeroMQ Base-85
 encoding](https://rfc.zeromq.org/spec/32/).
