@@ -4,7 +4,7 @@ const Z85Alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 
 var decodeMap [256]int
 
-var decodeMultipliers []uint32
+var decodeMultipliers [5]uint32
 
 var paddingChunk = [5]byte{'#', '#', '#', '#', '#'}
 
@@ -12,10 +12,9 @@ func init() {
 	for i := range Z85Alphabet {
 		decodeMap[Z85Alphabet[i]] = i
 	}
-	decodeMultipliers = make([]uint32, 0, 5)
 	var multiplier uint32 = 85 * 85 * 85 * 85
-	for _ = range 5 {
-		decodeMultipliers = append(decodeMultipliers, multiplier)
+	for i := range 5 {
+		decodeMultipliers[i] = multiplier
 		multiplier /= 85
 	}
 }
