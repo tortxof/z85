@@ -1,5 +1,7 @@
 package z85
 
+import "io"
+
 const Z85Alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
 
 var decodeMap [256]int
@@ -83,4 +85,150 @@ func Z85Decode(data []byte) []byte {
 		copy(result[chunkNum*4:], decoded[:])
 	}
 	return result[:len(result)-padding]
+}
+
+type Encoder struct {
+	w   io.Writer
+	buf [4]byte
+	n   int
+	err error
+}
+
+func (enc *Encoder) writeChunk(chunk [4]byte) {
+	encoded := Z85EncodeChunk(chunk)
+	_, err := enc.w.Write(encoded[:])
+	if err != nil {
+		enc.err = err
+	}
+}
+
+func (enc *Encoder) Close() error {
+	if enc.n > 0 {
+		padding := 4 - enc.n
+		chunk := [4]byte{}
+		copy(chunk[:], enc.buf[:enc.n])
+		encodedChunk := Z85EncodeChunk(chunk)
+		_, err := enc.w.Write(encodedChunk[:5-padding])
+		if err != nil {
+			enc.err = err
+		}
+	}
+	return enc.err
+}
+
+func (enc *Encoder) Write(p []byte) (int, error) {
+	if enc.err != nil {
+		return 0, enc.err
+	}
+
+	bytesIn := len(p)
+
+	if enc.n > 0 {
+		bytesNeeded := 4 - enc.n
+		if bytesIn >= bytesNeeded {
+			copy(enc.buf[enc.n:], p[:bytesNeeded])
+			enc.writeChunk(enc.buf)
+			p = p[bytesNeeded:]
+			enc.n = 0
+		} else {
+			copy(enc.buf[enc.n:], p)
+			enc.n += bytesIn
+			return bytesIn, nil
+		}
+	}
+
+	if enc.err != nil {
+		return 0, enc.err
+	}
+
+	for len(p) >= 4 {
+		var chunk [4]byte
+		copy(chunk[:], p[:4])
+		enc.writeChunk(chunk)
+		if enc.err != nil {
+			return 0, enc.err
+		}
+		p = p[4:]
+	}
+
+	enc.n = copy(enc.buf[:], p)
+
+	return bytesIn, enc.err
+}
+
+func NewEncoder(w io.Writer) io.WriteCloser {
+	return &Encoder{w: w}
+}
+
+type Decoder struct {
+	w   io.Writer
+	buf [5]byte
+	n   int
+	err error
+}
+
+func (dec *Decoder) writeChunk(chunk [5]byte) {
+	decoded := Z85DecodeChunk(chunk)
+	_, err := dec.w.Write(decoded[:])
+	if err != nil {
+		dec.err = err
+	}
+}
+
+func (dec *Decoder) Close() error {
+	if dec.n > 0 {
+		padding := 5 - dec.n
+		chunk := paddingChunk
+		copy(chunk[:], dec.buf[:dec.n])
+		decodedChunk := Z85DecodeChunk(chunk)
+		_, err := dec.w.Write(decodedChunk[:4-padding])
+		if err != nil {
+			dec.err = err
+		}
+	}
+	return dec.err
+}
+
+func (dec *Decoder) Write(p []byte) (int, error) {
+	if dec.err != nil {
+		return 0, dec.err
+	}
+
+	bytesIn := len(p)
+
+	if dec.n > 0 {
+		bytesNeeded := 5 - dec.n
+		if bytesIn >= bytesNeeded {
+			copy(dec.buf[dec.n:], p[:bytesNeeded])
+			dec.writeChunk(dec.buf)
+			p = p[bytesNeeded:]
+			dec.n = 0
+		} else {
+			copy(dec.buf[dec.n:], p)
+			dec.n += bytesIn
+			return bytesIn, nil
+		}
+	}
+
+	if dec.err != nil {
+		return 0, dec.err
+	}
+
+	for len(p) >= 5 {
+		var chunk [5]byte
+		copy(chunk[:], p[:5])
+		dec.writeChunk(chunk)
+		if dec.err != nil {
+			return 0, dec.err
+		}
+		p = p[5:]
+	}
+
+	dec.n = copy(dec.buf[:], p)
+
+	return bytesIn, dec.err
+}
+
+func NewDecoder(w io.Writer) io.WriteCloser {
+	return &Decoder{w: w}
 }
