@@ -104,7 +104,7 @@ echo -n "By/Jn" | ./z85decode
 
 ```bash
 # Run tests
-go test
+go test ./...
 
 # Run benchmarks
 go test -bench=.
