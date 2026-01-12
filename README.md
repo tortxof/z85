@@ -38,12 +38,40 @@ func main() {
 
 ## API
 
+### Byte Slice Functions
+
 - `Z85Encode(data []byte) []byte` - Encode a byte slice to Z85
 - `Z85Decode(data []byte) []byte` - Decode a Z85 byte slice to binary
 - `Z85EncodeChunk(chunk [4]byte) [5]byte` - Encode a single 4-byte chunk
 - `Z85DecodeChunk(chunk [5]byte) [4]byte` - Decode a single 5-byte chunk
 
 Partial chunks are handled automatically with internal padding.
+
+### Streaming API
+
+- `NewEncoder(w io.Writer) io.WriteCloser` - Create a streaming encoder
+- `NewDecoder(w io.Writer) io.WriteCloser` - Create a streaming decoder
+
+The streaming types implement `io.WriteCloser`. Data written to the
+encoder/decoder is processed and written to the underlying writer. Call
+`Close()` to flush any buffered partial chunks.
+
+```go
+// Streaming encode
+var buf bytes.Buffer
+encoder := z85.NewEncoder(&buf)
+encoder.Write([]byte{0x86, 0x4F, 0xD2, 0x6F})
+encoder.Write([]byte{0xB5, 0x59, 0xF7, 0x5B})
+encoder.Close()
+fmt.Println(buf.String()) // HelloWorld
+
+// Streaming decode
+var out bytes.Buffer
+decoder := z85.NewDecoder(&out)
+io.Copy(decoder, strings.NewReader("HelloWorld"))
+decoder.Close()
+fmt.Printf("%x\n", out.Bytes()) // 864fd26fb559f75b
+```
 
 ## CLI Tools
 
@@ -83,6 +111,7 @@ go test -bench=.
 
 # Run fuzz tests
 go test -fuzz=FuzzZ85RoundTrip
+go test -fuzz=FuzzStreamRoundTrip
 ```
 
 ## License
