@@ -220,3 +220,56 @@ func TestStreamRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func FuzzStreamRoundTrip(f *testing.F) {
+	f.Add([]byte{0x86, 0x4F, 0xD2, 0x6F, 0xB5, 0x59, 0xF7, 0x5B}, uint8(1))
+	f.Add([]byte("Hello world!!"), uint8(3))
+	f.Add([]byte{}, uint8(1))
+	f.Add([]byte{0x42}, uint8(7))
+	f.Add([]byte{0xFF, 0xFF, 0xFF, 0xFF}, uint8(4))
+
+	f.Fuzz(func(t *testing.T, input []byte, chunkSize uint8) {
+		if chunkSize == 0 {
+			chunkSize = 1
+		}
+
+		// Encode in chunks
+		var encBuf bytes.Buffer
+		encoder := NewEncoder(&encBuf)
+		data := input
+		for len(data) > 0 {
+			n := int(chunkSize)
+			if n > len(data) {
+				n = len(data)
+			}
+			encoder.Write(data[:n])
+			data = data[n:]
+		}
+		if err := encoder.Close(); err != nil {
+			t.Fatalf("encoder.Close() error: %v", err)
+		}
+		encoded := encBuf.Bytes()
+
+		// Decode in chunks
+		var decBuf bytes.Buffer
+		decoder := NewDecoder(&decBuf)
+		data = encoded
+		for len(data) > 0 {
+			n := int(chunkSize)
+			if n > len(data) {
+				n = len(data)
+			}
+			decoder.Write(data[:n])
+			data = data[n:]
+		}
+		if err := decoder.Close(); err != nil {
+			t.Fatalf("decoder.Close() error: %v", err)
+		}
+		decoded := decBuf.Bytes()
+
+		if !bytes.Equal(input, decoded) {
+			t.Errorf("Round trip failed: input %v (len=%d), encoded %q (len=%d), decoded %v (len=%d), chunkSize=%d",
+				input, len(input), encoded, len(encoded), decoded, len(decoded), chunkSize)
+		}
+	})
+}
