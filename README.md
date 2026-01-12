@@ -47,6 +47,10 @@ func main() {
 
 Partial chunks are handled automatically with internal padding.
 
+**Note:** The decode functions do not validate input. Bytes outside the Z85
+alphabet are silently treated as the character `'0'` (value 0). Ensure input
+contains only valid Z85 characters if correctness is critical.
+
 ### Streaming API
 
 - `NewEncoder(w io.Writer) io.WriteCloser` - Create a streaming encoder
