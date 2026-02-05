@@ -26,7 +26,7 @@ go test ./...
 go test -v ./...
 
 # Run a specific test
-go test -run TestZ85Encode
+go test -run TestEncode
 
 # Run fuzz tests
 go test -fuzz FuzzZ85RoundTrip
@@ -42,8 +42,8 @@ go build ./cmd/z85decode
 
 ## Architecture
 
-- `z85.go` - Core library with `Z85Encode`/`Z85Decode` functions for byte slices,
-  `Z85EncodeChunk`/`Z85DecodeChunk` for single 4-byte/5-byte chunks, and
+- `z85.go` - Core library with `Encode`/`Decode` functions for byte slices,
+  `EncodeChunk`/`DecodeChunk` for single 4-byte/5-byte chunks, and
   `NewEncoder`/`NewDecoder` for streaming `io.WriteCloser` implementations
 - `z85_test.go` - Unit tests, fuzz tests, and benchmarks
 - `cmd/z85encode/` - CLI tool that reads stdin and outputs Z85-encoded data

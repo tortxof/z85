@@ -22,7 +22,7 @@ func init() {
 }
 
 // Process one 4 byte chunk of input data. Return 5 bytes of encoded data.
-func Z85EncodeChunk(chunk [4]byte) [5]byte {
+func EncodeChunk(chunk [4]byte) [5]byte {
 	value := uint32(chunk[0])<<24 | uint32(chunk[1])<<16 | uint32(chunk[2])<<8 | uint32(chunk[3])
 
 	result := [5]byte{}
@@ -35,7 +35,7 @@ func Z85EncodeChunk(chunk [4]byte) [5]byte {
 	return result
 }
 
-func Z85Encode(data []byte) []byte {
+func Encode(data []byte) []byte {
 	numInputChunks := len(data) / 4
 	remainingBytes := len(data) % 4
 	padding := 0
@@ -47,14 +47,14 @@ func Z85Encode(data []byte) []byte {
 	for chunkNum := range numInputChunks {
 		var chunk [4]byte
 		copy(chunk[:], data[chunkNum*4:])
-		encoded := Z85EncodeChunk(chunk)
+		encoded := EncodeChunk(chunk)
 		copy(result[chunkNum*5:], encoded[:])
 	}
 	return result[:len(result)-padding]
 }
 
 // Process one 5 byte chunk of Z85 encoded data. Return 4 bytes of decoded data.
-func Z85DecodeChunk(chunk [5]byte) [4]byte {
+func DecodeChunk(chunk [5]byte) [4]byte {
 	var value uint32
 	var result = [4]byte{}
 
@@ -69,7 +69,7 @@ func Z85DecodeChunk(chunk [5]byte) [4]byte {
 	return result
 }
 
-func Z85Decode(data []byte) []byte {
+func Decode(data []byte) []byte {
 	numInputChunks := len(data) / 5
 	remainingBytes := len(data) % 5
 	padding := 0
@@ -81,7 +81,7 @@ func Z85Decode(data []byte) []byte {
 	for chunkNum := range numInputChunks {
 		chunk := paddingChunk
 		copy(chunk[:], data[chunkNum*5:])
-		decoded := Z85DecodeChunk(chunk)
+		decoded := DecodeChunk(chunk)
 		copy(result[chunkNum*4:], decoded[:])
 	}
 	return result[:len(result)-padding]
@@ -95,7 +95,7 @@ type Encoder struct {
 }
 
 func (enc *Encoder) writeChunk(chunk [4]byte) {
-	encoded := Z85EncodeChunk(chunk)
+	encoded := EncodeChunk(chunk)
 	_, err := enc.w.Write(encoded[:])
 	if err != nil {
 		enc.err = err
@@ -107,7 +107,7 @@ func (enc *Encoder) Close() error {
 		padding := 4 - enc.n
 		chunk := [4]byte{}
 		copy(chunk[:], enc.buf[:enc.n])
-		encodedChunk := Z85EncodeChunk(chunk)
+		encodedChunk := EncodeChunk(chunk)
 		_, err := enc.w.Write(encodedChunk[:5-padding])
 		if err != nil {
 			enc.err = err
@@ -168,7 +168,7 @@ type Decoder struct {
 }
 
 func (dec *Decoder) writeChunk(chunk [5]byte) {
-	decoded := Z85DecodeChunk(chunk)
+	decoded := DecodeChunk(chunk)
 	_, err := dec.w.Write(decoded[:])
 	if err != nil {
 		dec.err = err
@@ -180,7 +180,7 @@ func (dec *Decoder) Close() error {
 		padding := 5 - dec.n
 		chunk := paddingChunk
 		copy(chunk[:], dec.buf[:dec.n])
-		decodedChunk := Z85DecodeChunk(chunk)
+		decodedChunk := DecodeChunk(chunk)
 		_, err := dec.w.Write(decodedChunk[:4-padding])
 		if err != nil {
 			dec.err = err
